@@ -12,16 +12,19 @@ The identity of WAZIS lives in what it REFUSES to build. There is intentionally:
 Do not add any of the above. The launch gate is: confirm all four absences hold.
 """
 
+import json
 import os
+import re
 import sqlite3
 import secrets
 import hashlib
+import unicodedata
 import uuid
 from datetime import datetime, timezone
 
 from flask import (
     Flask, g, request, redirect, url_for, render_template,
-    session, abort, flash,
+    session, abort, flash, jsonify,
 )
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -145,6 +148,115 @@ def find_root_id(entry_id):
     return e["id"] if e["parent_id"] is None else e["parent_id"]
 
 
+# ------------------------------------------------- what responses are welcome
+# The author of a Need may say what kinds of response they welcome. This is not
+# a category of the Need: nothing sorts, filters or ranks by it. It is not
+# consent either. It says "I am open to hearing this kind of response", never
+# "I agree to what you propose".
+WELCOMES = ("information", "mutual_aid", "arranged_work")
+WELCOMES_LABEL = {
+    "information": "Information or pointers",
+    "mutual_aid": "A hand from someone, with no payment",
+    "arranged_work": "Someone proposing organised work",
+}
+
+
+def current_intent(entry_id):
+    """The author's newest statement for a Need: (stated, welcomes, set_at)."""
+    row = get_db().execute(
+        "SELECT welcomes, set_at FROM need_intents WHERE entry_id = ? "
+        "ORDER BY id DESC LIMIT 1", (entry_id,)
+    ).fetchone()
+    if row is None or row["welcomes"] is None:
+        return {"stated": False, "welcomes": [], "set_at": None}
+    return {"stated": True, "welcomes": json.loads(row["welcomes"]),
+            "set_at": row["set_at"]}
+
+
+# ------------------------------------------------- the Need document, contract 1
+# A small, stable description of one Need for another system to read. It is the
+# whole of what WAZIS promises about its shape; nothing outside WAZIS should read
+# the database or scrape a page. See docs/contract/need-document-v1.md.
+#
+# It never names the author and never includes replies.
+NEED_DOCUMENT_KIND = "wazis.need-document"
+NEED_DOCUMENT_CONTRACT = 1
+NEED_DIGEST_KIND = "wazis.need"
+NEED_DIGEST_SCHEMA = 1
+
+_ORIGIN = re.compile(
+    r"^(https?)://"
+    r"((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*)"
+    r"(?::([0-9]{1,5}))?$"
+)
+
+
+def canonical_json(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def sha256_of(value):
+    return "sha256:" + hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def clean_origin(value):
+    """An origin in its plain form, or None if it is not one."""
+    text = (value or "").strip().lower()
+    if text.endswith("/"):
+        text = text[:-1]
+    match = _ORIGIN.match(text)
+    if match is None:
+        return None
+    scheme, host, port = match.groups()
+    if port is not None:
+        number = int(port)
+        if not 1 <= number <= 65535:
+            return None
+        if number != {"http": 80, "https": 443}[scheme]:
+            return f"{scheme}://{host}:{number}"
+    return f"{scheme}://{host}"
+
+
+def normalise_need_text(text):
+    """The words of a Need in the one form that is hashed: NFC, LF, trimmed."""
+    text = unicodedata.normalize("NFC", text)
+    return text.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
+def need_digest(instance, need_id, text):
+    return sha256_of({"kind": NEED_DIGEST_KIND, "schema": NEED_DIGEST_SCHEMA,
+                      "instance": instance, "need_id": need_id, "text": text})
+
+
+def need_document(*, instance, entry, intent, issued_at):
+    """One Need as contract 1 describes it. Pure: the same inputs, the same bytes.
+
+    `entry` needs id, status, text and created_at; `intent` is what
+    `current_intent` returns. A withdrawn Need has no words, so its document
+    carries none, no digest of them, and no statement of what was welcome.
+    """
+    document = {
+        "kind": NEED_DOCUMENT_KIND,
+        "contract": NEED_DOCUMENT_CONTRACT,
+        "instance": instance,
+        "need_id": entry["id"],
+        "status": entry["status"],
+        "created_at": entry["created_at"],
+        "issued_at": issued_at,
+    }
+    if entry["status"] == "open":
+        text = normalise_need_text(entry["text"])
+        document["text"] = text
+        document["need_digest"] = need_digest(instance, entry["id"], text)
+        document["need_digest_schema"] = NEED_DIGEST_SCHEMA
+        document["intent"] = (
+            {"stated": True, "welcomes": sorted(intent["welcomes"]),
+             "set_at": intent["set_at"]}
+            if intent["stated"] else {"stated": False})
+    document["document_digest"] = sha256_of(document)
+    return document
+
+
 # ------------------------------------------------------------------------ routes
 @app.route("/")
 def home():
@@ -187,7 +299,64 @@ def thread(entry_id):
         (root_id,),
     ).fetchall()
     return render_template("thread.html", root=root, replies=replies,
-                           me=current_author_id())
+                           me=current_author_id(),
+                           intent=current_intent(root_id),
+                           welcomes_label=WELCOMES_LABEL)
+
+
+@app.route("/entries/<int:entry_id>/intent", methods=["POST"])
+def set_intent(entry_id):
+    """The author says what kinds of response they welcome, or takes it back.
+
+    Only the author, only on their own open Need. Each change is appended; the
+    Need itself is not edited, and nothing else about it changes.
+    """
+    aid = current_author_id()
+    db = get_db()
+    e = db.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
+    if e is None or e["parent_id"] is not None:
+        abort(404)
+    if not aid or e["author_id"] != aid:
+        abort(403)
+    if e["status"] != "open":
+        abort(409, "This need was withdrawn.")
+    if request.form.get("say_nothing"):
+        stored = None
+    else:
+        chosen = request.form.getlist("welcomes")
+        if any(value not in WELCOMES for value in chosen):
+            abort(400, "Unknown kind of response.")
+        stored = canonical_json(sorted(set(chosen)))
+    db.execute(
+        "INSERT INTO need_intents (entry_id, welcomes, set_at) VALUES (?,?,?)",
+        (entry_id, stored, now_iso()))
+    db.commit()
+    return redirect(url_for("thread", entry_id=entry_id))
+
+
+@app.route("/e/<int:entry_id>/need.json")
+def need_json(entry_id):
+    """The Need document for one Need (contract 1). Read-only.
+
+    Served only when this instance knows its own public address: a document
+    that names the wrong instance would be worse than none.
+    """
+    instance = clean_origin(os.environ.get("WAZIS_PUBLIC_ORIGIN"))
+    if instance is None:
+        return jsonify({"error": "this instance has no public origin configured "
+                                 "(WAZIS_PUBLIC_ORIGIN), so it serves no Need "
+                                 "documents"}), 503
+    e = get_db().execute(
+        "SELECT id, parent_id, text, status, created_at FROM entries WHERE id = ?",
+        (entry_id,)).fetchone()
+    if e is None or e["parent_id"] is not None:
+        abort(404)
+    document = need_document(instance=instance, entry=e,
+                             intent=current_intent(entry_id), issued_at=now_iso())
+    response = app.response_class(canonical_json(document) + "\n",
+                                  mimetype="application/json")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/new")

@@ -34,6 +34,14 @@ key is shown once so the author can return on another device.
 happened in the world in response to the Need. The link is its provenance. It is what
 separates "reality answered" from discussion. WAZIS shows the link; it does not verify it.
 
+**What the author welcomes.** The author of a Need may say what kinds of response
+they are open to: information or pointers, a hand from someone with no payment, or
+someone proposing organised work. They may tick any, none, or say nothing at all,
+and may change it at any time. This is **not a category of the Need** — WAZIS does
+not sort, filter or rank by it — and it is **not consent**: it is not agreement to
+any response, and it authorises nobody to act for the author or commit them to
+anything.
+
 **Withdrawal.** Only the author of an entry can withdraw it. The text and link are cleared
 and a "withdrawn" marker stays so the thread remains intact. No one else can remove, close,
 hide or edit an entry. A Need has no "closed" state.
@@ -59,18 +67,26 @@ hide or edit an entry. A Need has no "closed" state.
 | Reply to a Need, with or without a link | Works |
 | Reality Feedback shown by its link, and marked on the home list | Works |
 | Withdraw your own entry | Works; anyone else gets HTTP 403 |
+| Say what kinds of response you welcome on your own Need | Works; appended, never edited |
+| Need document for another system to read (contract 1) | Works when `WAZIS_PUBLIC_ORIGIN` is set |
 | Pseudonymous identity with signed cookie and recovery key | Works |
 | CSRF protection on every POST | Works |
 | Home list of open Needs, newest first, no ranking | Works (latest 200) |
 | Schema that cannot store a "closed" status | Works (SQLite `CHECK` constraint) |
 
-Two tables hold everything: `authors` and `entries` ([`app/schema.sql`](app/schema.sql)).
+Three tables hold everything: `authors`, `entries` and `need_intents`
+([`app/schema.sql`](app/schema.sql)). `entries` is unchanged; what an author
+welcomes is kept beside it, never on it.
+
+The Need document is described in
+[docs/contract/need-document-v1.md](docs/contract/need-document-v1.md). It is the
+only shape WAZIS promises to another system.
 
 ## Current limitations
 
 - Tests are a small offline suite ([`tests/`](tests/)). There is no linter, type checker or
   continuous integration configured.
-- No JSON API, no migrations, no command-line tool, no packaging, no deployment setup.
+- No JSON API beyond the read-only Need document. No migrations, no command-line tool, no packaging, no deployment setup.
 - Links are checked only for an `http://` or `https://` prefix. Nothing confirms that a link
   shows what the reply says it shows.
 - If `WAZIS_SECRET_KEY` is not set, the app falls back to an insecure development key. Set a
@@ -119,7 +135,7 @@ no other system depends on WAZIS.
 
 | Area | Relationship today | Planned direction |
 |---|---|---|
-| **Mac Fleet OS** | Separate system. Mac Fleet OS lists WAZIS in its interface as "not implemented". | To be defined in an integration contract. Local first stays the default. |
+| **Mac Fleet OS** | Separate system. WAZIS knows nothing about it. Another system may read a Need document; WAZIS is not told and nothing is written back. | Any return of results to WAZIS stays a person posting a reply. |
 | **Mission / Job** | WAZIS has no missions, jobs, tasks, deliverables or payments. | After a human decision, a Need may lead to a mission or job in another system. WAZIS would hold a link to it, not a copy of it. |
 | **YUJO / matching** | None. WAZIS has no profiles, capabilities or matching. | Another system may suggest people or capabilities for a Need. See the open question above. |
 | **Asset / provenance** | A Reality Feedback link may point at a published result. WAZIS does not check it. | Optional verification of results. See [docs/future-verification-layer.md](docs/future-verification-layer.md). |
@@ -173,6 +189,7 @@ CONTRIBUTING.md         how to take part (written for the earlier model)
 CODE_OF_CONDUCT.md      conduct based on dignity
 app/                    the v0.1 application: the canonical implementation
 tests/                  offline tests for the application
+contract/               canonical examples of the Need document, checked by the tests
 docs/                   design records, reviews and history (start at docs/README.md)
 bindings/               written mappings to external implementers (specification only)
 questions/ candidates/ feedback/ schemas/   placeholders from the earlier model

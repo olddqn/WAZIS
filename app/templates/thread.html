@@ -19,6 +19,34 @@
   </div>
 </article>
 
+{% if root.status == 'open' %}
+<section class="welcomes">
+  {% if intent.stated and intent.welcomes %}
+    <p class="welcomes-line">The author welcomes:
+      {% for w in intent.welcomes %}<span class="welcomes-item">{{ welcomes_label[w] }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
+    </p>
+  {% elif intent.stated %}
+    <p class="welcomes-line">The author has said they are not looking for a response of these kinds.</p>
+  {% else %}
+    <p class="welcomes-line">The author has not said what kind of response they welcome.</p>
+  {% endif %}
+  <p class="note">This says what the author is open to hearing. It is not agreement to
+     anything, and nobody may act on the author's behalf because of it.</p>
+  {% if me and root.author_id == me %}
+  <form class="welcomes-form" method="post" action="{{ url_for('set_intent', entry_id=root.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <p>What kind of response would you welcome? Tick any, or none.</p>
+    {% for value in ['information', 'mutual_aid', 'arranged_work'] %}
+    <label class="check"><input type="checkbox" name="welcomes" value="{{ value }}"
+      {% if intent.stated and value in intent.welcomes %}checked{% endif %}> {{ welcomes_label[value] }}</label>
+    {% endfor %}
+    <button type="submit">Save</button>
+    <button class="link-btn" type="submit" name="say_nothing" value="1">say nothing instead</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="replies">
   {% for r in replies %}
   <article class="entry reply{% if r.link and r.status == 'open' %} rf{% endif %}{% if r.status == 'withdrawn' %} withdrawn{% endif %}">

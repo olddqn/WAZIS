@@ -9,6 +9,9 @@ are kept as written.
 
 ## Start here
 
+- [contract/need-document-v1.md](contract/need-document-v1.md) — the one shape
+  WAZIS promises to another system. Current, and matches the code.
+
 - [glossary.md](glossary.md) — terms. Written for the earlier model; many still apply.
 - [design/WAZIS_V01_IMPLEMENTATION_PLAN.md](design/WAZIS_V01_IMPLEMENTATION_PLAN.md) — the
   plan the application was built from.

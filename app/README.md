@@ -35,6 +35,7 @@ The SQLite database (`wazis.db`) is created automatically on first run.
 | `WAZIS_DB` | Path to the SQLite file (default `app/wazis.db`). |
 | `WAZIS_HTTPS` | Set to `1` behind TLS to mark the session cookie `Secure`. |
 | `PORT` | Dev server port (default 5000). |
+| `WAZIS_PUBLIC_ORIGIN` | This instance's public address, e.g. `https://wazis.example`. Needed only to serve Need documents (`/e/<id>/need.json`); without it that route answers 503. |
 
 ## Identity
 
