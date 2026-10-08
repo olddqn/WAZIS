@@ -1,0 +1,54 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local agent workspace
+.claude/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage output
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+node_modules/
+
+# Runtime state: databases and logs. Needs posted to an instance are data, not source.
+wazis.db
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Environment files (the example file is intentionally tracked if present)
+.env
+.env.*
+!.env.example
+
+# Not part of WAZIS: an unrelated project that shares this working directory
+registry-os/
+
+# Local-only notes containing personal and machine-specific detail
+WAZIS_ORIGIN_RECOVERY.md

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Open needs, held without judgment.</h1>
+  <p>Bring something unresolved. It will be held here — not ranked, scored, or closed.
+     Reality, not the crowd, answers what it can.</p>
+  <p><a class="btn" href="{{ url_for('new_entry') }}">Share an open need</a></p>
+</section>
+
+{% if roots %}
+<ul class="entry-list">
+  {% for e in roots %}
+  <li>
+    <a class="entry-link" href="{{ url_for('thread', entry_id=e.id) }}">
+      <span class="entry-text">{{ e.text }}</span>
+    </a>
+    <div class="meta">
+      <span class="who">{{ e.author_handle or ('anon-' + e.author_id[:6]) }}</span>
+      <span class="when">{{ e.created_at|when }}</span>
+      {% if e.id in rf_roots %}<span class="rf-mark">↩ reality answered</span>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Nothing is held open yet. The first open need is waiting to be shared.</p>
+{% endif %}
+{% endblock %}

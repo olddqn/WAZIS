@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="new">
+  <h1>Share something that's open</h1>
+  <p>A need, a question, something unresolved. You don't have to solve it.
+     It will be held here — not judged, ranked, or closed.</p>
+  <form method="post" action="{{ url_for('create_entry') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <textarea name="text" rows="6" autofocus placeholder="What is open for you?"></textarea>
+    <p class="note">Only you will be able to take this down later. It will be visible to everyone.</p>
+    <button type="submit">Share</button>
+  </form>
+  <p class="back"><a href="{{ url_for('home') }}">← all open needs</a></p>
+</section>
+{% endblock %}

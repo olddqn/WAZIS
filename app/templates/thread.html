@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<article class="entry root {% if root.status == 'withdrawn' %}withdrawn{% endif %}">
+  {% if root.status == 'withdrawn' %}
+    <p class="withdrawn-note">[withdrawn by author]</p>
+  {% else %}
+    <p class="entry-text">{{ root.text|urlize(target='_blank') }}</p>
+  {% endif %}
+  <div class="meta">
+    <span class="who">{{ root.author_handle or ('anon-' + root.author_id[:6]) }}</span>
+    <span class="when">{{ root.created_at|when }}</span>
+    {% if me and root.author_id == me and root.status == 'open' %}
+      <form class="inline" method="post" action="{{ url_for('withdraw', entry_id=root.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="link-btn" type="submit">withdraw</button>
+      </form>
+    {% endif %}
+  </div>
+</article>
+
+<section class="replies">
+  {% for r in replies %}
+  <article class="entry reply{% if r.link and r.status == 'open' %} rf{% endif %}{% if r.status == 'withdrawn' %} withdrawn{% endif %}">
+    {% if r.status == 'withdrawn' %}
+      <p class="withdrawn-note">[withdrawn by author]</p>
+    {% else %}
+      {% if r.link %}<p class="rf-label">↩ what reality answered</p>{% endif %}
+      {% if r.text %}<p class="entry-text">{{ r.text|urlize(target='_blank') }}</p>{% endif %}
+      {% if r.link %}
+        <p class="rf-link"><a href="{{ r.link }}" target="_blank" rel="nofollow noopener">{{ r.link }}</a></p>
+      {% endif %}
+    {% endif %}
+    <div class="meta">
+      <span class="who">{{ r.author_handle or ('anon-' + r.author_id[:6]) }}</span>
+      <span class="when">{{ r.created_at|when }}</span>
+      {% if me and r.author_id == me and r.status == 'open' %}
+        <form class="inline" method="post" action="{{ url_for('withdraw', entry_id=r.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <button class="link-btn" type="submit">withdraw</button>
+        </form>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+{% if root.status == 'open' %}
+<form class="reply-form" method="post" action="{{ url_for('reply', entry_id=root.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Reply
+    <textarea name="text" rows="3" placeholder="A perspective, a question, or what happened…"></textarea>
+  </label>
+  <label>Link to where reality answered (optional)
+    <input type="url" name="link" placeholder="https://…  a Dan-Go claim, a merged PR, a published result">
+  </label>
+  <p class="note">A reply with a real external link is shown as Reality Feedback — reality
+     answering, not discussion. It does not close anything.</p>
+  <button type="submit">Reply</button>
+</form>
+{% else %}
+<p class="note">This need was withdrawn by its author. Replies remain, but it is no longer open for new ones.</p>
+{% endif %}
+
+<p class="back"><a href="{{ url_for('home') }}">← all open needs</a></p>
+{% endblock %}

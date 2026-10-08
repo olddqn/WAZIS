@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="recover">
+  <h1>Restore your identity</h1>
+  <p>Paste the recovery key you saved. It restores your pseudonym and the ability to
+     withdraw your own entries.</p>
+  <form method="post" action="{{ url_for('recover') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <textarea name="key" rows="2" placeholder="recovery key"></textarea>
+    <button type="submit">Restore</button>
+  </form>
+  <p class="back"><a href="{{ url_for('me') }}">← identity</a></p>
+</section>
+{% endblock %}

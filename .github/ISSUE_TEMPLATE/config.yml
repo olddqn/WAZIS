@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 憲法を読む（参加の前提）
+    url: https://github.com/olddqn/WAZIS/blob/main/WAZIS_CONSTITUTION.md
+    about: 唯一の法（尊厳）と不可侵条項（同意・異議・撤回・尊厳）を必ず確認してください。
+  - name: 仕様を読む
+    url: https://github.com/olddqn/WAZIS/blob/main/docs/history/WAZIS_SPEC.md
+    about: Question / Discussion / Refinement / Implementation Candidate / Reality Feedback の機構。
+  - name: 行動規範
+    url: https://github.com/olddqn/WAZIS/blob/main/CODE_OF_CONDUCT.md
+    about: 他者の尊厳を侵さないこと。WAZIS は正解を決めず、想いを測りません。

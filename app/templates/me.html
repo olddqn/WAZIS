@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="me">
+  <h1>Your identity</h1>
+
+  {% if author %}
+    <p>You are <strong>{{ name }}</strong> — a pseudonym. No profile, no reputation, no score.</p>
+
+    <form method="post" action="{{ url_for('set_handle') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <label>Display handle (optional)
+        <input type="text" name="handle" maxlength="40" value="{{ author.handle or '' }}"
+               placeholder="leave blank to stay anon-{{ author.id[:6] }}">
+      </label>
+      <button type="submit">Save handle</button>
+    </form>
+
+    {% if recovery_key %}
+    <div class="recovery">
+      <h2>Save your recovery key</h2>
+      <p>This is the only way to restore this identity — and your right to withdraw your
+         entries — on another device or browser. We store no email and no password.
+         Save it somewhere safe now:</p>
+      <code class="key">{{ recovery_key }}</code>
+    </div>
+    {% endif %}
+
+    <p><a href="{{ url_for('recover') }}">Restore a different identity from a recovery key</a></p>
+
+    <form method="post" action="{{ url_for('logout') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="link-btn" type="submit">Sign out on this device</button>
+    </form>
+  {% else %}
+    <p>You don't have an identity yet. One is created the moment you share or reply —
+       no email, no password.</p>
+    <p>
+      <a class="btn" href="{{ url_for('new_entry') }}">Share an open need</a>
+      &nbsp; or &nbsp;
+      <a href="{{ url_for('recover') }}">restore from a recovery key</a>.
+    </p>
+  {% endif %}
+</section>
+{% endblock %}
